@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/{owner}/{repo}/discussions
+    about: Para perguntas gerais, ideias e discussões sobre o projeto
+  - name: 📚 Documentation
+    url: https://github.com/{owner}/{repo}/wiki
+    about: Consulte nossa documentação completa
+  - name: 🆘 Support
+    url: mailto:your-email@domain.com
+    about: Para suporte direto ou questões sensíveis

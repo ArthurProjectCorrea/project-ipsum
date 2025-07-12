@@ -1,0 +1,39 @@
+name: 🚨 Lint Commits
+
+on: [push, pull_request]
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.6
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run commitlint
+        run: |
+          echo "Checking commit messages..."
+          # Get the number of commits in the repository
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "Total commits in repository: $COMMIT_COUNT"
+          
+          # If there are fewer than 10 commits, check all commits
+          if [ $COMMIT_COUNT -lt 10 ]; then
+            echo "Checking all $COMMIT_COUNT commits..."
+            npx commitlint --from=HEAD~$((COMMIT_COUNT-1)) --to=HEAD --verbose
+          else
+            echo "Checking last 10 commits..."
+            npx commitlint --from=HEAD~10 --to=HEAD --verbose
+          fi

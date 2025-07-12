@@ -1,0 +1,73 @@
+{
+  "name": "@arthurcorreadev/components-core",
+  "version": "0.1.0",
+  "description": "Core components library for Arthur Correa Dev projects",
+  "private": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "react",
+    "components",
+    "typescript",
+    "ui",
+    "design-system",
+    "arthurcorreadev"
+  ],
+  "author": {
+    "name": "Arthur Correa",
+    "email": "arthur@arthurcorrea.dev",
+    "url": "https://arthurcorrea.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArthurProjectCorrea/template-project.git",
+    "directory": "packages/components-core"
+  },
+  "bugs": {
+    "url": "https://github.com/ArthurProjectCorrea/template-project/issues"
+  },
+  "homepage": "https://github.com/ArthurProjectCorrea/template-project/tree/main/packages/components-core#readme",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "eslint": "^8.57.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0"
+  }
+}

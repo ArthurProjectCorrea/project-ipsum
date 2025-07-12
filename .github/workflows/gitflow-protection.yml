@@ -1,0 +1,242 @@
+name: 🔒 GitFlow Branch Protection
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+  push:
+    branches: [ main, dev ]
+
+env:
+  NODE_VERSION: '18'
+  PNPM_VERSION: '8'
+
+jobs:
+  # 🔍 Validate GitFlow Rules
+  validate-gitflow:
+    name: 🔍 Validate GitFlow Rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Validate branch naming
+        run: |
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          echo "🌿 Validating branch: $BRANCH_NAME"
+          
+          # Allow main and dev branches
+          if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "dev" ]]; then
+            echo "✅ Core branch validated"
+            exit 0
+          fi
+          
+          # Validate feature branch naming
+          if [[ ! "$BRANCH_NAME" =~ ^(feat|fix|docs|style|refactor|test|chore)\/[0-9]+-[a-z0-9-]+$ ]]; then
+            echo "❌ Invalid branch name: $BRANCH_NAME"
+            echo "📋 Expected format: <type>/<issue-number>-<description>"
+            echo "📋 Examples: feat/123-user-auth, fix/456-login-bug"
+            exit 1
+          fi
+          
+          echo "✅ Feature branch name validated"
+
+      - name: 🎯 Validate PR target branch
+        if: github.event_name == 'pull_request'
+        run: |
+          TARGET_BRANCH="${{ github.base_ref }}"
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          
+          echo "🔄 PR: $SOURCE_BRANCH → $TARGET_BRANCH"
+          
+          # Feature branches should target dev
+          if [[ "$SOURCE_BRANCH" =~ ^(feat|fix|docs|style|refactor|test|chore)\/ ]]; then
+            if [[ "$TARGET_BRANCH" != "dev" ]]; then
+              echo "❌ Feature branches must target 'dev', not '$TARGET_BRANCH'"
+              echo "💡 Please change the target branch to 'dev'"
+              exit 1
+            fi
+            echo "✅ Feature branch correctly targets dev"
+          fi
+          
+          # Only dev should target main
+          if [[ "$TARGET_BRANCH" == "main" && "$SOURCE_BRANCH" != "dev" ]]; then
+            echo "❌ Only 'dev' branch can merge to 'main'"
+            echo "💡 Feature branches should merge to 'dev' first"
+            exit 1
+          fi
+          
+          echo "✅ PR target validation passed"
+
+  # 🔧 Quality Checks (Required for all branches)
+  quality-checks:
+    name: 🔧 Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🧹 Lint check
+        run: pnpm lint
+
+      - name: 🔍 Type check
+        run: pnpm check-types
+
+      - name: 🏗️ Build check
+        run: pnpm build
+
+  # 🧪 Test Suite (Required for all branches)
+  test-suite:
+    name: 🧪 Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🧪 Run tests
+        run: pnpm test
+
+      - name: 📊 Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  # 🔐 Security Scan (Required for main branch)
+  security-scan:
+    name: 🔐 Security Scan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Run security audit
+        run: |
+          npm audit --audit-level=moderate
+          echo "✅ Security audit completed"
+
+      - name: 🕵️ CodeQL Analysis
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: 🏗️ Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 🔍 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  # 📋 Deployment Preview (for dev branch)
+  deployment-preview:
+    name: 📋 Deployment Preview
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    needs: [quality-checks, test-suite]
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🏗️ Build for preview
+        run: pnpm build
+
+      - name: 🚀 Deploy to staging
+        run: |
+          echo "🚧 Deploying to staging environment..."
+          echo "🔗 Preview URL would be generated here"
+          # Add your deployment logic here
+
+  # ✅ Status Check Summary
+  gitflow-status:
+    name: ✅ GitFlow Status
+    runs-on: ubuntu-latest
+    needs: [validate-gitflow, quality-checks, test-suite]
+    if: always()
+    steps:
+      - name: 📊 Check all jobs status
+        run: |
+          echo "🔍 GitFlow Validation: ${{ needs.validate-gitflow.result }}"
+          echo "🔧 Quality Checks: ${{ needs.quality-checks.result }}"
+          echo "🧪 Test Suite: ${{ needs.test-suite.result }}"
+          
+          if [[ "${{ needs.validate-gitflow.result }}" != "success" ]]; then
+            echo "❌ GitFlow validation failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.quality-checks.result }}" != "success" ]]; then
+            echo "❌ Quality checks failed"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.test-suite.result }}" != "success" ]]; then
+            echo "❌ Test suite failed"
+            exit 1
+          fi
+          
+          echo "✅ All GitFlow requirements satisfied!"
+
+  # 🎉 Auto-merge dev to main (optional, commented for safety)
+  # auto-merge-dev:
+  #   name: 🎉 Auto-merge dev to main
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/dev' && needs.gitflow-status.result == 'success'
+  #   needs: [gitflow-status, security-scan]
+  #   steps:
+  #     - name: 🤖 Create merge PR
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const pr = await github.rest.pulls.create({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             title: '🚀 Release: Merge dev to main',
+  #             head: 'dev',
+  #             base: 'main',
+  #             body: '🤖 Automated release PR created after successful dev branch validation'
+  #           });
+  #           console.log(`Created PR: ${pr.data.html_url}`);

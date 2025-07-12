@@ -1,0 +1,50 @@
+name: 🚀 Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.6
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Create Versions
+        run: |
+          echo "Running changeset version..."
+          if pnpm changeset version; then
+            echo "Versions updated successfully"
+          else
+            echo "No changesets found or error occurred"
+          fi
+
+      - name: Commit Version Bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if there are any changes to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "chore(release): version bump"
+            git push
+            echo "Version bump committed and pushed"
+          else
+            echo "No changes to commit"
+          fi
